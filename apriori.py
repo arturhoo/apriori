@@ -26,6 +26,7 @@ def remove_items_without_min_support(item_freq, min_sup, transactions):
 
 
 def self_join(list_of_sets, l=2):
+    '''generates itemsets efficiently'''
     assert(all(len(item_set) == l for item_set in list_of_sets))
     new_list_of_sets = []
     first_l_features = defaultdict(list)
@@ -51,9 +52,13 @@ def self_join(list_of_sets, l=2):
 
 
 if __name__ == '__main__':
+    min_sup = 0.4
     content = load_data('data/census_mod.dat')
     one_item_freq = defaultdict(int)
     two_item_freq = defaultdict(int)
+    three_item_freq = defaultdict(int)
+    four_item_freq = defaultdict(int)
+
     transactions = []
     for line in content:
         transactions.append(frozenset(line.strip().split()))
@@ -63,7 +68,7 @@ if __name__ == '__main__':
             one_item_freq[item] += 1
 
     print len(one_item_freq.keys())
-    remove_items_without_min_support(one_item_freq, 0.1, transactions)
+    remove_items_without_min_support(one_item_freq, min_sup, transactions)
     print len(one_item_freq.keys())
 
     # second step
@@ -73,5 +78,30 @@ if __name__ == '__main__':
             if set(combination).issubset(transaction):
                 two_item_freq[frozenset(set(combination))] += 1
 
-    for k, v in two_item_freq.iteritems():
-        print str(k) + ': ' + str(v)
+    print len(two_item_freq.keys())
+    remove_items_without_min_support(two_item_freq, min_sup, transactions)
+    print len(two_item_freq.keys())
+
+    candidate_three_item_sets = self_join(two_item_freq.keys())
+
+    # third step
+    for idx, item_set in enumerate(candidate_three_item_sets):
+        for transaction in transactions:
+            if item_set.issubset(transaction):
+                three_item_freq[item_set] += 1
+
+    print len(three_item_freq.keys())
+    remove_items_without_min_support(three_item_freq, min_sup, transactions)
+    print len(three_item_freq.keys())
+
+    candidate_four_item_sets = self_join(three_item_freq.keys(), 3)
+
+    # third step
+    for idx, item_set in enumerate(candidate_four_item_sets):
+        for transaction in transactions:
+            if item_set.issubset(transaction):
+                four_item_freq[item_set] += 1
+
+    print len(four_item_freq.keys())
+    remove_items_without_min_support(four_item_freq, min_sup, transactions)
+    print len(four_item_freq.keys())
