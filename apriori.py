@@ -2,6 +2,8 @@
 from sys import exit, exc_info
 from itertools import combinations
 from collections import defaultdict
+from pprint import pprint
+from time import clock
 
 
 def load_data(file_name):
@@ -24,7 +26,7 @@ def remove_items_without_min_support(item_freq, min_sup, transactions):
             del item_freq[k]
 
 
-def self_join(list_of_sets, l=2):
+def self_join(list_of_sets, l):
     '''generates itemsets efficiently'''
     assert(all(len(item_set) == l for item_set in list_of_sets))
     new_list_of_sets = []
@@ -34,7 +36,7 @@ def self_join(list_of_sets, l=2):
         l_feature = ''.join(sorted(item_set)[:l - 1])
         first_l_features[l_feature].append(item_set)
     '''example dict generated so far:
-    {'hours=overtime':
+    {'hours=overtime': item
         [frozenset(['hours=overtime', 'sex=Male']),
          frozenset(['hours=overtime', 'salary<=50K']
     }
@@ -50,8 +52,64 @@ def self_join(list_of_sets, l=2):
     return new_list_of_sets
 
 
+def gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts):
+    '''
+    :param item_freq: itemsets of same lenght to be used for generating subsets
+    :param min_acc: minimum accuracy
+    :param item_freq_dicts: dictionaries of item_sets of all lengths
+    '''
+    rules = []
+    for k, v in item_freq.items():
+        # building 1-consequent rule
+        accurate_consequents = []
+        for combination in combinations(k, 1):
+            consequent = frozenset(combination)
+            antecedent = k - consequent
+            ant_len_item_freq = item_freq_dicts[len(antecedent) - 1]
+            if len(antecedent) == 1:
+                # the itemset of length one stores its keys as strings
+                # rather than frozensets
+                acc = float(v) / ant_len_item_freq[list(antecedent)[0]]
+            else:
+                acc = float(v) / ant_len_item_freq[antecedent]
+            if acc >= min_acc:
+                accurate_consequents.append(consequent)
+                rules.append(((antecedent, consequent), acc))
+
+        # two-item-itemsets, only produce 1-consequent rules
+        if len(k) <= 2:
+            continue
+
+        # building (n+1)-consequent rules
+        consequent_length = 2
+        while(len(accurate_consequents) != 0 and consequent_length < len(k)):
+            new_accurate_consequents = []
+            for combination in combinations(accurate_consequents, 2):
+                consequent = frozenset.union(*combination)
+                if len(consequent) != consequent_length:
+                    # combined itemsets must share n-1 common items
+                    continue
+                antecedent = k - consequent
+                ant_len_item_freq = item_freq_dicts[len(antecedent) - 1]
+                if len(antecedent) == 1:
+                    # the itemset of length one stores its keys as strings
+                    # rather than frozensets
+                    acc = float(v) / ant_len_item_freq[list(antecedent)[0]]
+                else:
+                    acc = float(v) / ant_len_item_freq[antecedent]
+                if acc >= min_acc:
+                    new_accurate_consequents.append(consequent)
+                    rules.append(((antecedent, consequent), acc))
+            accurate_consequents = new_accurate_consequents
+            consequent_length += 1
+
+    return list(set(rules))
+
+
 if __name__ == '__main__':
-    min_sup = 0.4
+    min_sup = 0.3
+    min_acc = 0.7
+    t1 = clock()
     content = load_data('data/census_mod.dat')
     item_freq_dicts = [defaultdict(int)]
 
@@ -88,3 +146,11 @@ if __name__ == '__main__':
                                          transactions)
         next_candidate_item_sets = self_join(item_freq_dicts[-1].keys(),
                                              len(item_freq_dicts))
+
+    # generating rules
+    rules = []
+    for item_freq in list(reversed(item_freq_dicts))[:-1]:
+        rules += gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts)
+
+    t2 = clock()
+    print 'Time spent: ', round(t2 - t1, 3)
