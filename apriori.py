@@ -2,6 +2,7 @@
 from sys import exit, exc_info
 from itertools import combinations
 from collections import defaultdict
+from pprint import pprint
 
 
 def load_data(file_name):
@@ -24,6 +25,31 @@ def remove_items_without_min_support(item_freq, min_sup, transactions):
             del item_freq[k]
 
 
+def self_join(list_of_sets, l=2):
+    assert(all(len(item_set) == l for item_set in list_of_sets))
+    new_list_of_sets = []
+    first_l_features = defaultdict(list)
+    for item_set in list_of_sets:
+        # small cheat to make a list a hashable type XD
+        l_feature = ''.join(sorted(item_set)[:l - 1])
+        first_l_features[l_feature].append(item_set)
+    '''example dict generated so far:
+    {'hours=overtime':
+        [frozenset(['hours=overtime', 'sex=Male']),
+         frozenset(['hours=overtime', 'salary<=50K']
+    }
+    '''
+    for k, v in first_l_features.items():
+        if len(v) < 2:
+            del first_l_features[k]  # delete those that appear only once
+        else:
+            # generate the new itemsets
+            for combination in combinations(v, 2):
+                union = combination[0].union(combination[1])
+                new_list_of_sets.append(union)
+    return new_list_of_sets
+
+
 if __name__ == '__main__':
     content = load_data('data/census_mod.dat')
     one_item_freq = defaultdict(int)
@@ -40,16 +66,12 @@ if __name__ == '__main__':
     remove_items_without_min_support(one_item_freq, 0.1, transactions)
     print len(one_item_freq.keys())
 
-    for k, v in one_item_freq.iteritems():
-        print k + ': ' + str(v)
-
     # second step
     two_item_combinations = combinations(one_item_freq.keys(), 2)
     for idx, combination in enumerate(two_item_combinations):
         for transaction in transactions:
             if set(combination).issubset(transaction):
                 two_item_freq[frozenset(set(combination))] += 1
-        print idx
 
     for k, v in two_item_freq.iteritems():
         print str(k) + ': ' + str(v)
