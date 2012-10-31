@@ -21,27 +21,33 @@ def load_data(file_name):
 
 
 def format_output(item_freq_dicts, rules, transactions):
+    '''first round the values, then truncate
+    '''
     for idx, item_freq in enumerate(item_freq_dicts):
-        print 'Itemsets of size ', idx + 1
-        sorted_item_freq = sorted(item_freq.items(),
-                                  key=lambda tup: (tup[1], tup[0]),
-                                  reverse=True)
-        for item, v in sorted_item_freq:
+        print 'Itemsets of size', idx + 1
+        formatted_item_freq = []
+        for item, v in item_freq.items():
             support = float(v) / len(transactions)
             if item.__class__ == str:
-                print item, '{0:.3f}'.format(support)
+                formatted_item_freq.append((item, round(support, 3)))
             elif item.__class__ == frozenset:
-                formated_item = ','.join(sorted(map(str, item)))
-                print formated_item, '{0:.3f}'.format(support)
+                formatted_item_freq.append((','.join(sorted(map(str, item))),
+                                            round(support, 3)))
+        sorted_item_freq = sorted(formatted_item_freq,
+                                  key=lambda tup: (-tup[1], tup[0]))
+        for item, sup in sorted_item_freq:
+            print item, '{0:.3f}'.format(sup)
+
         print
 
     print 'RULES'
-    sorted_rules = sorted(rules, key=lambda tup: (tup[1], tup[0]),
-                          reverse=True)
-    for rule in sorted_rules:
-        print ','.join(sorted(map(str, rule[0][0]))), '->', \
-              ','.join(sorted(map(str, rule[0][1]))), \
-              '{0:.3f}'.format(rule[1])
+    formatted_rules = [(','.join(sorted(map(str, rule[0]))) + ' -> ' +
+                        ','.join(sorted(map(str, rule[1]))),
+                       round(acc, 3))
+                       for rule, acc in rules]
+    sorted_rules = sorted(formatted_rules, key=lambda tup: (-tup[1], tup[0]))
+    for rule, acc in sorted_rules:
+        print rule, '{0:.3f}'.format(acc)
 
 
 def remove_items_without_min_support(item_freq, min_sup, transactions):
