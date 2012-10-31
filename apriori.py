@@ -15,9 +15,33 @@ def load_data(file_name):
         print 'I/O error({0}): {1}'.format(e.errno, e.strerror)
         exit()
     except:
-        print "Unexpected error:", exc_info()[0]
+        print 'Unexpected error: ', exc_info()[0]
         exit()
     return content
+
+
+def format_output(item_freq_dicts, rules, transactions):
+    for idx, item_freq in enumerate(item_freq_dicts):
+        print 'Itemsets of size ', idx + 1
+        sorted_item_freq = sorted(item_freq.items(),
+                                  key=lambda tup: (tup[1], tup[0]),
+                                  reverse=True)
+        for item, v in sorted_item_freq:
+            support = float(v) / len(transactions)
+            if item.__class__ == str:
+                print item, '{0:.3f}'.format(support)
+            elif item.__class__ == frozenset:
+                formated_item = ','.join(sorted(map(str, item)))
+                print formated_item, '{0:.3f}'.format(support)
+        print
+
+    print 'RULES'
+    sorted_rules = sorted(rules, key=lambda tup: (tup[1], tup[0]),
+                          reverse=True)
+    for rule in sorted_rules:
+        print ','.join(sorted(map(str, rule[0][0]))), '->', \
+              ','.join(sorted(map(str, rule[0][1]))), \
+              '{0:.3f}'.format(rule[1])
 
 
 def remove_items_without_min_support(item_freq, min_sup, transactions):
@@ -154,3 +178,4 @@ if __name__ == '__main__':
 
     t2 = clock()
     print 'Time spent: ', round(t2 - t1, 3)
+    format_output(item_freq_dicts, rules, transactions)
