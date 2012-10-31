@@ -2,7 +2,6 @@
 from sys import exit, exc_info
 from itertools import combinations
 from collections import defaultdict
-from pprint import pprint
 
 
 def load_data(file_name):
@@ -54,54 +53,38 @@ def self_join(list_of_sets, l=2):
 if __name__ == '__main__':
     min_sup = 0.4
     content = load_data('data/census_mod.dat')
-    one_item_freq = defaultdict(int)
-    two_item_freq = defaultdict(int)
-    three_item_freq = defaultdict(int)
-    four_item_freq = defaultdict(int)
+    item_freq_dicts = [defaultdict(int)]
 
     transactions = []
     for line in content:
         transactions.append(frozenset(line.strip().split()))
 
+    # first step
     for transaction in transactions:
         for item in transaction:
-            one_item_freq[item] += 1
-
-    print len(one_item_freq.keys())
-    remove_items_without_min_support(one_item_freq, min_sup, transactions)
-    print len(one_item_freq.keys())
+            item_freq_dicts[0][item] += 1
+    remove_items_without_min_support(item_freq_dicts[0], min_sup, transactions)
 
     # second step
-    two_item_combinations = combinations(one_item_freq.keys(), 2)
+    item_freq_dicts.append(defaultdict(int))
+    two_item_combinations = combinations(item_freq_dicts[0].keys(), 2)
     for idx, combination in enumerate(two_item_combinations):
         for transaction in transactions:
             if set(combination).issubset(transaction):
-                two_item_freq[frozenset(set(combination))] += 1
+                item_freq_dicts[1][frozenset(set(combination))] += 1
+    remove_items_without_min_support(item_freq_dicts[1], min_sup, transactions)
 
-    print len(two_item_freq.keys())
-    remove_items_without_min_support(two_item_freq, min_sup, transactions)
-    print len(two_item_freq.keys())
+    # next steps
+    next_candidate_item_sets = self_join(item_freq_dicts[1].keys(),
+                                         len(item_freq_dicts))
+    while(len(next_candidate_item_sets) != 0):
+        item_freq_dicts.append(defaultdict(int))
+        for idx, item_set in enumerate(next_candidate_item_sets):
+            for transaction in transactions:
+                if item_set.issubset(transaction):
+                    item_freq_dicts[-1][item_set] += 1
 
-    candidate_three_item_sets = self_join(two_item_freq.keys())
-
-    # third step
-    for idx, item_set in enumerate(candidate_three_item_sets):
-        for transaction in transactions:
-            if item_set.issubset(transaction):
-                three_item_freq[item_set] += 1
-
-    print len(three_item_freq.keys())
-    remove_items_without_min_support(three_item_freq, min_sup, transactions)
-    print len(three_item_freq.keys())
-
-    candidate_four_item_sets = self_join(three_item_freq.keys(), 3)
-
-    # third step
-    for idx, item_set in enumerate(candidate_four_item_sets):
-        for transaction in transactions:
-            if item_set.issubset(transaction):
-                four_item_freq[item_set] += 1
-
-    print len(four_item_freq.keys())
-    remove_items_without_min_support(four_item_freq, min_sup, transactions)
-    print len(four_item_freq.keys())
+        remove_items_without_min_support(item_freq_dicts[-1], min_sup,
+                                         transactions)
+        next_candidate_item_sets = self_join(item_freq_dicts[-1].keys(),
+                                             len(item_freq_dicts))
