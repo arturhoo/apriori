@@ -2,7 +2,6 @@
 from sys import exit, exc_info
 from itertools import combinations
 from collections import defaultdict
-from pprint import pprint
 from time import clock
 
 
@@ -26,7 +25,7 @@ def format_output(item_freq_dicts, rules, transactions):
     for idx, item_freq in enumerate(item_freq_dicts):
         print 'Itemsets of size', idx + 1
         formatted_item_freq = []
-        for item, v in item_freq.items():
+        for item, v in item_freq.iteritems():
             support = float(v) / len(transactions)
             if item.__class__ == str:
                 formatted_item_freq.append((item, round(support, 3)))
@@ -89,7 +88,7 @@ def gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts):
     :param item_freq_dicts: dictionaries of item_sets of all lengths
     '''
     rules = []
-    for k, v in item_freq.items():
+    for k, v in item_freq.iteritems():
         # building 1-consequent rule
         accurate_consequents = []
         for combination in combinations(k, 1):
