@@ -23,6 +23,8 @@ def format_output(item_freq_dicts, rules, transactions):
     '''first round the values, then truncate
     '''
     for idx, item_freq in enumerate(item_freq_dicts):
+        if len(item_freq) == 0:
+            continue
         print 'Itemsets of size', idx + 1
         formatted_item_freq = []
         for item, v in item_freq.iteritems():
