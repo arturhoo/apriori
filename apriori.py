@@ -214,7 +214,7 @@ if __name__ == '__main__':
     for idx, combination in enumerate(two_item_combinations):
         for transaction in transactions:
             if set(combination).issubset(transaction):
-                itemsets_list[1][frozenset(set(combination))] += 1
+                itemsets_list[1][frozenset(combination)] += 1
     remove_items_without_min_support(itemsets_list[1], min_sup, transactions)
 
     # next steps
