@@ -3,7 +3,24 @@ from sys import exit, exc_info
 from itertools import combinations
 from collections import defaultdict
 from time import clock
-from argparse import ArgumentParser
+from optparse import OptionParser
+
+
+def prepare_arguments(parser):
+    parser.add_option('-i', '--input', type='string', help='input file',
+                      dest='input')
+    parser.add_option('-s', '--support', type='float', help='minimum support',
+                      dest='support')
+    parser.add_option('-c', '--confidence', type='float',
+                        help='minimum confidence', dest='confidence')
+    (options, args) = parser.parse_args()
+    if not options.input:   # if input is not given
+        parser.error('Input filename not given')
+    if not options.support:   # if support is not given
+        parser.error('Support not given')
+    if not options.confidence:   # if confidence is not given
+        parser.error('Confidence not given')
+    return(options, args)
 
 
 def load_data(file_name):
@@ -139,17 +156,11 @@ def gen_subsets_and_rules(item_freq, min_conf, item_freq_dicts):
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Apriori Algorithm')
-    parser.add_argument('-i', '--input', type=str, help='input file',
-                        required=True)
-    parser.add_argument('-s', '--support', type=float, help='minimum support',
-                        required=True)
-    parser.add_argument('-c', '--confidence', type=float,
-                        help='minimum confidence', required=True)
-    args = vars(parser.parse_args())
-    min_sup = args['support']
-    min_conf = args['confidence']
-    content = load_data(args['input'])
+    parser = OptionParser(usage='Usage: %prog [options]')
+    (options, args) = prepare_arguments(parser)
+    min_sup = options.support
+    min_conf = options.confidence
+    content = load_data(options.input)
 
     t1 = clock()
     item_freq_dicts = [defaultdict(int)]
