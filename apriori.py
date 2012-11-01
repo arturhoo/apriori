@@ -6,8 +6,8 @@ from time import clock
 from optparse import OptionParser
 
 
-def prepare_arguments(parser):
-    '''prepares the argumets for the script to run'''
+def parse_arguments(parser):
+    '''parse the arguments provided in the command line'''
     parser.add_option('-i', '--input', type='string', help='input file',
                       dest='input')
     parser.add_option('-s', '--support', type='float', help='minimum support',
@@ -25,6 +25,12 @@ def prepare_arguments(parser):
 
 
 def get_transactions_from_file(file_name):
+    '''returns the transactions from a given file, where the items must be
+    separated by spaces.
+
+    :returns transactions: a list of transactions, where each transaction is a
+    frozenset containing items
+    '''
     try:
         with open(file_name) as f:
             content = f.readlines()
@@ -41,8 +47,10 @@ def get_transactions_from_file(file_name):
     return transactions
 
 
-def format_output(itemsets_list, rules, transactions):
-    '''first round the values, then truncate
+def print_results(itemsets_list, rules, transactions):
+    '''prints the results of the algorithm according to the standard specified
+    in the documentation of the task. The confidence values are first rounded
+    and then truncated
     '''
     for idx, itemsets in enumerate(itemsets_list):
         if len(itemsets) == 0:
@@ -70,7 +78,8 @@ def format_output(itemsets_list, rules, transactions):
         print rule, '{0:.3f}'.format(acc)
 
 
-def remove_items_without_min_support(itemsets, min_sup, transactions):
+def remove_itemsets_without_min_support(itemsets, min_sup, transactions):
+    '''simply remove the itemsets that doesn't have the minimum support'''
     for itemset, freq in itemsets.items():
         if float(freq) / len(transactions) < min_sup:
             del itemsets[itemset]
@@ -92,7 +101,7 @@ def generate_itemsets(itemsets_list):
                 if item_set.issubset(transaction):
                     itemsets_list[-1][item_set] += 1
 
-        remove_items_without_min_support(itemsets_list[-1], min_sup,
+        remove_itemsets_without_min_support(itemsets_list[-1], min_sup,
                                          transactions)
         next_candidate_item_sets = self_join(itemsets_list[-1])
 
@@ -202,7 +211,7 @@ def gen_subsets_and_rules(itemsets, min_conf, itemsets_list):
 
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options]')
-    (options, args) = prepare_arguments(parser)
+    (options, args) = parse_arguments(parser)
     min_sup = options.support
     min_conf = options.confidence
     t1 = clock()
@@ -214,7 +223,7 @@ if __name__ == '__main__':
     for transaction in transactions:
         for item in transaction:
             itemsets_list[0][frozenset([item])] += 1
-    remove_items_without_min_support(itemsets_list[0], min_sup, transactions)
+    remove_itemsets_without_min_support(itemsets_list[0], min_sup, transactions)
 
     # generate itemsets of length > 1
     generate_itemsets(itemsets_list)
@@ -226,4 +235,4 @@ if __name__ == '__main__':
 
     t2 = clock()
     # print 'Time spent: ', round(t2 - t1, 3)
-    format_output(itemsets_list, rules, transactions)
+    print_results(itemsets_list, rules, transactions)
