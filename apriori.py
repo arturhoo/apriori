@@ -7,12 +7,13 @@ from optparse import OptionParser
 
 
 def prepare_arguments(parser):
+    '''prepares the argumets for the script to run'''
     parser.add_option('-i', '--input', type='string', help='input file',
                       dest='input')
     parser.add_option('-s', '--support', type='float', help='minimum support',
                       dest='support')
     parser.add_option('-c', '--confidence', type='float',
-                        help='minimum confidence', dest='confidence')
+                      help='minimum confidence', dest='confidence')
     (options, args) = parser.parse_args()
     if not options.input:   # if input is not given
         parser.error('Input filename not given')
@@ -23,7 +24,7 @@ def prepare_arguments(parser):
     return(options, args)
 
 
-def load_data(file_name):
+def get_transactions_from_file(file_name):
     try:
         with open(file_name) as f:
             content = f.readlines()
@@ -34,28 +35,31 @@ def load_data(file_name):
     except:
         print 'Unexpected error: ', exc_info()[0]
         exit()
-    return content
+    transactions = []
+    for line in content:
+        transactions.append(frozenset(line.strip().split()))
+    return transactions
 
 
-def format_output(item_freq_dicts, rules, transactions):
+def format_output(itemsets_list, rules, transactions):
     '''first round the values, then truncate
     '''
-    for idx, item_freq in enumerate(item_freq_dicts):
-        if len(item_freq) == 0:
+    for idx, itemsets in enumerate(itemsets_list):
+        if len(itemsets) == 0:
             continue
         print 'Itemsets of size', idx + 1
-        formatted_item_freq = []
-        for item, v in item_freq.iteritems():
-            support = float(v) / len(transactions)
-            if item.__class__ == str:
-                formatted_item_freq.append((item, round(support, 3)))
-            elif item.__class__ == frozenset:
-                formatted_item_freq.append((','.join(sorted(map(str, item))),
-                                            round(support, 3)))
-        sorted_item_freq = sorted(formatted_item_freq,
-                                  key=lambda tup: (-tup[1], tup[0]))
-        for item, sup in sorted_item_freq:
-            print item, '{0:.3f}'.format(sup)
+        formatted_itemsets = []
+        for itemset, freq in itemsets.iteritems():
+            support = float(freq) / len(transactions)
+            if itemset.__class__ == str:
+                formatted_itemsets.append((itemset, round(support, 3)))
+            elif itemset.__class__ == frozenset:
+                formatted_itemsets.append((','.join(sorted(map(str, itemset))),
+                                           round(support, 3)))
+        sorted_itemsets = sorted(formatted_itemsets,
+                                 key=lambda tup: (-tup[1], tup[0]))
+        for itemset, support in sorted_itemsets:
+            print itemset, '{0:.3f}'.format(support)
 
         print
 
@@ -69,63 +73,95 @@ def format_output(item_freq_dicts, rules, transactions):
         print rule, '{0:.3f}'.format(acc)
 
 
-def remove_items_without_min_support(item_freq, min_sup, transactions):
-    for k, v in item_freq.items():
-        if float(v) / len(transactions) < min_sup:
-            del item_freq[k]
+def remove_items_without_min_support(itemsets, min_sup, transactions):
+    for itemset, freq in itemsets.items():
+        if float(freq) / len(transactions) < min_sup:
+            del itemsets[itemset]
 
 
-def self_join(list_of_sets, l):
-    '''generates itemsets efficiently'''
-    assert(all(len(item_set) == l for item_set in list_of_sets))
-    new_list_of_sets = []
-    first_l_features = defaultdict(list)
-    for item_set in list_of_sets:
-        # small cheat to make a list a hashable type XD
-        l_feature = ''.join(sorted(item_set)[:l - 1])
-        first_l_features[l_feature].append(item_set)
-    '''example dict generated so far:
-    {'hours=overtime': item
-        [frozenset(['hours=overtime', 'sex=Male']),
-         frozenset(['hours=overtime', 'salary<=50K']
-    }
+def self_join(itemsets):
+    '''generates itemsets efficiently by selfjoining the itemsets
+
+    :param itemsets: list of itemsets
+    :returns new_itemsets: list of itemsets containing l+1 members
     '''
-    for k, v in first_l_features.items():
-        if len(v) < 2:
-            del first_l_features[k]  # delete those that appear only once
-        else:
-            # generate the new itemsets
-            for combination in combinations(v, 2):
+    itemsets = itemsets.keys()  # we are only interested on the itemsets
+                                # themselves, not the frequencies
+    k = len(itemsets[0])  # length of the itemsets
+    # making sure all the itemsets have the same length
+    assert(all(len(itemset) == k for itemset in itemsets))
+    kmomo = build_k_minus_one_members_and_their_occurrences(itemsets, k)
+    return generate_itemsets_from_kmomo(kmomo)
+
+
+def build_k_minus_one_members_and_their_occurrences(itemsets, k):
+    '''in order to self join the itemsets, they must be sorted in lexical
+    order. Then, all the unique sets of k-1 members must be idenfified and
+    and the itemsets of length k in which they appear, associated
+
+    :param itemsets: list of itemsets
+    :param k: length of the itemsets
+    :returns k_minus_one_members_and_occurrences: dictionary where keys are
+        k-1 members, and values are itemsets of length k, where the members in
+        its key appear
+    '''
+    k_minus_one_members_and_occurrences = defaultdict(list)
+    for itemset in itemsets:
+        # small cheat to make a list a hashable type
+        k_minus_one_members = ''.join(sorted(itemset)[:k - 1])
+        k_minus_one_members_and_occurrences[k_minus_one_members].\
+            append(itemset)
+    return k_minus_one_members_and_occurrences
+
+
+def generate_itemsets_from_kmomo(kmomo):
+    '''here we identify pairs with the same first k-1 members and produce a new
+    itemset of length k+1. Given the kmomo dictionary, this task is easy as we
+    simply generate the combinations of size 2 of the associated itemsets where
+    they appear
+
+    :param kmomo: dictionary where keys are k-1 members, and values are
+        itemsets of length k, where the members in its key appear
+    :returns new_itemsets: list of itemsets containing k+1 members
+    '''
+    new_itemsets = []
+    for k_minus_one_members, occurrences in kmomo.items():
+        if len(occurrences) < 2:
+            # delete those k_minus_one_members that have only one occurrence
+            del kmomo[k_minus_one_members]
+        else:  # generate the new itemsets
+            for combination in combinations(occurrences, 2):
                 union = combination[0].union(combination[1])
-                new_list_of_sets.append(union)
-    return new_list_of_sets
+                new_itemsets.append(union)
+    return new_itemsets
 
 
-def gen_subsets_and_rules(item_freq, min_conf, item_freq_dicts):
+def gen_subsets_and_rules(itemsets, min_conf, itemsets_list):
     '''
-    :param item_freq: itemsets of same lenght to be used for generating subsets
+    :param itemsets: itemsets of same lenght to be used for generating subsets
     :param min_conf: minimum confidence
-    :param item_freq_dicts: dictionaries of item_sets of all lengths
+    :param itemsets_list: dictionaries of item_sets of all lengths
     '''
     rules = []
-    for k, v in item_freq.iteritems():
+    for k, v in itemsets.iteritems():
         # building 1-consequent rule
         accurate_consequents = []
         for combination in combinations(k, 1):
             consequent = frozenset(combination)
             antecedent = k - consequent
-            ant_len_item_freq = item_freq_dicts[len(antecedent) - 1]
+            ant_len_itemsets = itemsets_list[len(antecedent) - 1]
             if len(antecedent) == 1:
                 # the itemset of length one stores its keys as strings
                 # rather than frozensets
-                acc = float(v) / ant_len_item_freq[list(antecedent)[0]]
+                acc = float(v) / ant_len_itemsets[list(antecedent)[0]]
             else:
-                acc = float(v) / ant_len_item_freq[antecedent]
+                acc = float(v) / ant_len_itemsets[antecedent]
             if acc >= min_conf:
                 accurate_consequents.append(consequent)
                 rules.append(((antecedent, consequent), acc))
 
-        # two-item-itemsets, only produce 1-consequent rules
+        # 2-item-itemsets only produce 1-consequent rules,
+        # no need to go further
         if len(k) <= 2:
             continue
 
@@ -139,13 +175,13 @@ def gen_subsets_and_rules(item_freq, min_conf, item_freq_dicts):
                     # combined itemsets must share n-1 common items
                     continue
                 antecedent = k - consequent
-                ant_len_item_freq = item_freq_dicts[len(antecedent) - 1]
+                ant_len_itemsets = itemsets_list[len(antecedent) - 1]
                 if len(antecedent) == 1:
                     # the itemset of length one stores its keys as strings
                     # rather than frozensets
-                    acc = float(v) / ant_len_item_freq[list(antecedent)[0]]
+                    acc = float(v) / ant_len_itemsets[list(antecedent)[0]]
                 else:
-                    acc = float(v) / ant_len_item_freq[antecedent]
+                    acc = float(v) / ant_len_itemsets[antecedent]
                 if acc >= min_conf:
                     new_accurate_consequents.append(consequent)
                     rules.append(((antecedent, consequent), acc))
@@ -160,50 +196,45 @@ if __name__ == '__main__':
     (options, args) = prepare_arguments(parser)
     min_sup = options.support
     min_conf = options.confidence
-    content = load_data(options.input)
-
     t1 = clock()
-    item_freq_dicts = [defaultdict(int)]
 
-    transactions = []
-    for line in content:
-        transactions.append(frozenset(line.strip().split()))
+    transactions = get_transactions_from_file(options.input)
+
+    itemsets_list = [defaultdict(int)]
 
     # first step
     for transaction in transactions:
         for item in transaction:
-            item_freq_dicts[0][item] += 1
-    remove_items_without_min_support(item_freq_dicts[0], min_sup, transactions)
+            itemsets_list[0][item] += 1
+    remove_items_without_min_support(itemsets_list[0], min_sup, transactions)
 
     # second step
-    item_freq_dicts.append(defaultdict(int))
-    two_item_combinations = combinations(item_freq_dicts[0].keys(), 2)
+    itemsets_list.append(defaultdict(int))
+    two_item_combinations = combinations(itemsets_list[0].keys(), 2)
     for idx, combination in enumerate(two_item_combinations):
         for transaction in transactions:
             if set(combination).issubset(transaction):
-                item_freq_dicts[1][frozenset(set(combination))] += 1
-    remove_items_without_min_support(item_freq_dicts[1], min_sup, transactions)
+                itemsets_list[1][frozenset(set(combination))] += 1
+    remove_items_without_min_support(itemsets_list[1], min_sup, transactions)
 
     # next steps
-    next_candidate_item_sets = self_join(item_freq_dicts[1].keys(),
-                                         len(item_freq_dicts))
+    next_candidate_item_sets = self_join(itemsets_list[1])
     while(len(next_candidate_item_sets) != 0):
-        item_freq_dicts.append(defaultdict(int))
+        itemsets_list.append(defaultdict(int))
         for idx, item_set in enumerate(next_candidate_item_sets):
             for transaction in transactions:
                 if item_set.issubset(transaction):
-                    item_freq_dicts[-1][item_set] += 1
+                    itemsets_list[-1][item_set] += 1
 
-        remove_items_without_min_support(item_freq_dicts[-1], min_sup,
+        remove_items_without_min_support(itemsets_list[-1], min_sup,
                                          transactions)
-        next_candidate_item_sets = self_join(item_freq_dicts[-1].keys(),
-                                             len(item_freq_dicts))
+        next_candidate_item_sets = self_join(itemsets_list[-1])
 
     # generating rules
     rules = []
-    for item_freq in list(reversed(item_freq_dicts))[:-1]:
-        rules += gen_subsets_and_rules(item_freq, min_conf, item_freq_dicts)
+    for itemsets in list(reversed(itemsets_list))[:-1]:
+        rules += gen_subsets_and_rules(itemsets, min_conf, itemsets_list)
 
     t2 = clock()
     # print 'Time spent: ', round(t2 - t1, 3)
-    format_output(item_freq_dicts, rules, transactions)
+    format_output(itemsets_list, rules, transactions)
