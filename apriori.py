@@ -3,6 +3,7 @@ from sys import exit, exc_info
 from itertools import combinations
 from collections import defaultdict
 from time import clock
+from argparse import ArgumentParser
 
 
 def load_data(file_name):
@@ -83,10 +84,10 @@ def self_join(list_of_sets, l):
     return new_list_of_sets
 
 
-def gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts):
+def gen_subsets_and_rules(item_freq, min_conf, item_freq_dicts):
     '''
     :param item_freq: itemsets of same lenght to be used for generating subsets
-    :param min_acc: minimum accuracy
+    :param min_conf: minimum confidence
     :param item_freq_dicts: dictionaries of item_sets of all lengths
     '''
     rules = []
@@ -103,7 +104,7 @@ def gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts):
                 acc = float(v) / ant_len_item_freq[list(antecedent)[0]]
             else:
                 acc = float(v) / ant_len_item_freq[antecedent]
-            if acc >= min_acc:
+            if acc >= min_conf:
                 accurate_consequents.append(consequent)
                 rules.append(((antecedent, consequent), acc))
 
@@ -128,7 +129,7 @@ def gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts):
                     acc = float(v) / ant_len_item_freq[list(antecedent)[0]]
                 else:
                     acc = float(v) / ant_len_item_freq[antecedent]
-                if acc >= min_acc:
+                if acc >= min_conf:
                     new_accurate_consequents.append(consequent)
                     rules.append(((antecedent, consequent), acc))
             accurate_consequents = new_accurate_consequents
@@ -138,10 +139,19 @@ def gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts):
 
 
 if __name__ == '__main__':
-    min_sup = 0.3
-    min_acc = 0.7
+    parser = ArgumentParser(description='Apriori Algorithm')
+    parser.add_argument('-i', '--input', type=str, help='input file',
+                        required=True)
+    parser.add_argument('-s', '--support', type=float, help='minimum support',
+                        required=True)
+    parser.add_argument('-c', '--confidence', type=float,
+                        help='minimum confidence', required=True)
+    args = vars(parser.parse_args())
+    min_sup = args['support']
+    min_conf = args['confidence']
+    content = load_data(args['input'])
+
     t1 = clock()
-    content = load_data('data/census_mod.dat')
     item_freq_dicts = [defaultdict(int)]
 
     transactions = []
@@ -181,8 +191,8 @@ if __name__ == '__main__':
     # generating rules
     rules = []
     for item_freq in list(reversed(item_freq_dicts))[:-1]:
-        rules += gen_subsets_and_rules(item_freq, min_acc, item_freq_dicts)
+        rules += gen_subsets_and_rules(item_freq, min_conf, item_freq_dicts)
 
     t2 = clock()
-    print 'Time spent: ', round(t2 - t1, 3)
+    # print 'Time spent: ', round(t2 - t1, 3)
     format_output(item_freq_dicts, rules, transactions)
