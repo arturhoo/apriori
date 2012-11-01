@@ -102,7 +102,7 @@ def generate_itemsets(itemsets_list):
                     itemsets_list[-1][item_set] += 1
 
         remove_itemsets_without_min_support(itemsets_list[-1], min_sup,
-                                         transactions)
+                                            transactions)
         next_candidate_item_sets = self_join(itemsets_list[-1])
 
 
@@ -163,49 +163,60 @@ def generate_itemsets_from_kmomo(kmomo):
     return new_itemsets
 
 
-def gen_subsets_and_rules(itemsets, min_conf, itemsets_list):
+def build_one_consequent_rules(itemset, freq):
+    accurate_consequents = []
+    rules = []
+    for combination in combinations(itemset, 1):
+        consequent = frozenset(combination)
+        antecedent = itemset - consequent
+        ant_len_itemsets = itemsets_list[len(antecedent) - 1]
+        conf = float(freq) / ant_len_itemsets[antecedent]
+        if conf >= min_conf:
+            accurate_consequents.append(consequent)
+            rules.append(((antecedent, consequent), conf))
+    return accurate_consequents, rules
+
+
+def build_n_plus_one_consequent_rules(itemset, freq, accurate_consequents):
+    rules = []
+    consequent_length = 2
+    while(len(accurate_consequents) != 0 and
+          consequent_length < len(itemset)):
+        new_accurate_consequents = []
+        for combination in combinations(accurate_consequents, 2):
+            consequent = frozenset.union(*combination)
+            if len(consequent) != consequent_length:
+                # combined itemsets must share n-1 common items
+                continue
+            antecedent = itemset - consequent
+            ant_len_itemsets = itemsets_list[len(antecedent) - 1]
+            conf = float(freq) / ant_len_itemsets[antecedent]
+            if conf >= min_conf:
+                new_accurate_consequents.append(consequent)
+                rules.append(((antecedent, consequent), conf))
+        accurate_consequents = new_accurate_consequents
+        consequent_length += 1
+    return rules
+
+
+def generate_rules(itemsets, min_conf, itemsets_list):
     '''
     :param itemsets: itemsets of same lenght to be used for generating subsets
     :param min_conf: minimum confidence
     :param itemsets_list: dictionaries of item_sets of all lengths
     '''
     rules = []
-    for k, v in itemsets.iteritems():
-        # building 1-consequent rule
-        accurate_consequents = []
-        for combination in combinations(k, 1):
-            consequent = frozenset(combination)
-            antecedent = k - consequent
-            ant_len_itemsets = itemsets_list[len(antecedent) - 1]
-            acc = float(v) / ant_len_itemsets[antecedent]
-
-            if acc >= min_conf:
-                accurate_consequents.append(consequent)
-                rules.append(((antecedent, consequent), acc))
-
+    for itemset, freq in itemsets.iteritems():
+        accurate_consequents, new_rules = build_one_consequent_rules(itemset,
+                                                                     freq)
+        rules += new_rules
         # 2-item-itemsets only produce 1-consequent rules,
-        # no need to go further
-        if len(k) <= 2:
+        # no need to go further with those
+        if len(itemset) <= 2:
             continue
 
-        # building (n+1)-consequent rules
-        consequent_length = 2
-        while(len(accurate_consequents) != 0 and consequent_length < len(k)):
-            new_accurate_consequents = []
-            for combination in combinations(accurate_consequents, 2):
-                consequent = frozenset.union(*combination)
-                if len(consequent) != consequent_length:
-                    # combined itemsets must share n-1 common items
-                    continue
-                antecedent = k - consequent
-                ant_len_itemsets = itemsets_list[len(antecedent) - 1]
-                acc = float(v) / ant_len_itemsets[antecedent]
-                if acc >= min_conf:
-                    new_accurate_consequents.append(consequent)
-                    rules.append(((antecedent, consequent), acc))
-            accurate_consequents = new_accurate_consequents
-            consequent_length += 1
-
+        rules += build_n_plus_one_consequent_rules(itemset, freq,
+                                                   accurate_consequents)
     return list(set(rules))
 
 
@@ -223,7 +234,8 @@ if __name__ == '__main__':
     for transaction in transactions:
         for item in transaction:
             itemsets_list[0][frozenset([item])] += 1
-    remove_itemsets_without_min_support(itemsets_list[0], min_sup, transactions)
+    remove_itemsets_without_min_support(itemsets_list[0], min_sup,
+                                        transactions)
 
     # generate itemsets of length > 1
     generate_itemsets(itemsets_list)
@@ -231,7 +243,7 @@ if __name__ == '__main__':
     # generating rules
     rules = []
     for itemsets in list(reversed(itemsets_list))[:-1]:
-        rules += gen_subsets_and_rules(itemsets, min_conf, itemsets_list)
+        rules += generate_rules(itemsets, min_conf, itemsets_list)
 
     t2 = clock()
     # print 'Time spent: ', round(t2 - t1, 3)
