@@ -76,6 +76,27 @@ def remove_items_without_min_support(itemsets, min_sup, transactions):
             del itemsets[itemset]
 
 
+def generate_itemsets(itemsets_list):
+    '''given the trivial itemsets of length 1, this function generates the
+    following itemsets using self joins, and then eliminating the itemsets
+    without the minimum support
+
+    :param itemsets_list: a list containing only one element which is the
+        dictionary of itemsets of length 1
+    '''
+    next_candidate_item_sets = self_join(itemsets_list[0])
+    while(len(next_candidate_item_sets) != 0):
+        itemsets_list.append(defaultdict(int))
+        for idx, item_set in enumerate(next_candidate_item_sets):
+            for transaction in transactions:
+                if item_set.issubset(transaction):
+                    itemsets_list[-1][item_set] += 1
+
+        remove_items_without_min_support(itemsets_list[-1], min_sup,
+                                         transactions)
+        next_candidate_item_sets = self_join(itemsets_list[-1])
+
+
 def self_join(itemsets):
     '''generates itemsets efficiently by selfjoining the itemsets
 
@@ -187,37 +208,16 @@ if __name__ == '__main__':
     t1 = clock()
 
     transactions = get_transactions_from_file(options.input)
-
     itemsets_list = [defaultdict(int)]
 
-    # first step
+    # generate itemsets of length 1
     for transaction in transactions:
         for item in transaction:
             itemsets_list[0][frozenset([item])] += 1
     remove_items_without_min_support(itemsets_list[0], min_sup, transactions)
 
-    # second step
-    itemsets_list.append(defaultdict(int))
-    two_item_combinations = combinations(itemsets_list[0].keys(), 2)
-    for idx, combination in enumerate(two_item_combinations):
-        for transaction in transactions:
-            combination_set = frozenset.union(*map(frozenset, combination))
-            if combination_set.issubset(transaction):
-                itemsets_list[1][combination_set] += 1
-    remove_items_without_min_support(itemsets_list[1], min_sup, transactions)
-
-    # next steps
-    next_candidate_item_sets = self_join(itemsets_list[1])
-    while(len(next_candidate_item_sets) != 0):
-        itemsets_list.append(defaultdict(int))
-        for idx, item_set in enumerate(next_candidate_item_sets):
-            for transaction in transactions:
-                if item_set.issubset(transaction):
-                    itemsets_list[-1][item_set] += 1
-
-        remove_items_without_min_support(itemsets_list[-1], min_sup,
-                                         transactions)
-        next_candidate_item_sets = self_join(itemsets_list[-1])
+    # generate itemsets of length > 1
+    generate_itemsets(itemsets_list)
 
     # generating rules
     rules = []
