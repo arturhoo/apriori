@@ -51,11 +51,8 @@ def format_output(itemsets_list, rules, transactions):
         formatted_itemsets = []
         for itemset, freq in itemsets.iteritems():
             support = float(freq) / len(transactions)
-            if itemset.__class__ == str:
-                formatted_itemsets.append((itemset, round(support, 3)))
-            elif itemset.__class__ == frozenset:
-                formatted_itemsets.append((','.join(sorted(map(str, itemset))),
-                                           round(support, 3)))
+            formatted_itemsets.append((','.join(sorted(map(str, itemset))),
+                                       round(support, 3)))
         sorted_itemsets = sorted(formatted_itemsets,
                                  key=lambda tup: (-tup[1], tup[0]))
         for itemset, support in sorted_itemsets:
@@ -150,12 +147,8 @@ def gen_subsets_and_rules(itemsets, min_conf, itemsets_list):
             consequent = frozenset(combination)
             antecedent = k - consequent
             ant_len_itemsets = itemsets_list[len(antecedent) - 1]
-            if len(antecedent) == 1:
-                # the itemset of length one stores its keys as strings
-                # rather than frozensets
-                acc = float(v) / ant_len_itemsets[list(antecedent)[0]]
-            else:
-                acc = float(v) / ant_len_itemsets[antecedent]
+            acc = float(v) / ant_len_itemsets[antecedent]
+
             if acc >= min_conf:
                 accurate_consequents.append(consequent)
                 rules.append(((antecedent, consequent), acc))
@@ -176,12 +169,7 @@ def gen_subsets_and_rules(itemsets, min_conf, itemsets_list):
                     continue
                 antecedent = k - consequent
                 ant_len_itemsets = itemsets_list[len(antecedent) - 1]
-                if len(antecedent) == 1:
-                    # the itemset of length one stores its keys as strings
-                    # rather than frozensets
-                    acc = float(v) / ant_len_itemsets[list(antecedent)[0]]
-                else:
-                    acc = float(v) / ant_len_itemsets[antecedent]
+                acc = float(v) / ant_len_itemsets[antecedent]
                 if acc >= min_conf:
                     new_accurate_consequents.append(consequent)
                     rules.append(((antecedent, consequent), acc))
@@ -205,7 +193,7 @@ if __name__ == '__main__':
     # first step
     for transaction in transactions:
         for item in transaction:
-            itemsets_list[0][item] += 1
+            itemsets_list[0][frozenset([item])] += 1
     remove_items_without_min_support(itemsets_list[0], min_sup, transactions)
 
     # second step
@@ -213,8 +201,9 @@ if __name__ == '__main__':
     two_item_combinations = combinations(itemsets_list[0].keys(), 2)
     for idx, combination in enumerate(two_item_combinations):
         for transaction in transactions:
-            if set(combination).issubset(transaction):
-                itemsets_list[1][frozenset(combination)] += 1
+            combination_set = frozenset.union(*map(frozenset, combination))
+            if combination_set.issubset(transaction):
+                itemsets_list[1][combination_set] += 1
     remove_items_without_min_support(itemsets_list[1], min_sup, transactions)
 
     # next steps
