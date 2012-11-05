@@ -29,7 +29,7 @@ def get_transactions_from_file(file_name):
     separated by spaces.
 
     :returns transactions: a list of transactions, where each transaction is a
-    frozenset containing items
+        frozenset containing items
     '''
     try:
         with open(file_name) as f:
@@ -106,21 +106,6 @@ def generate_itemsets(itemsets_list):
         next_candidate_item_sets = self_join(itemsets_list[-1])
 
 
-def self_join(itemsets):
-    '''generates itemsets efficiently by selfjoining the itemsets
-
-    :param itemsets: list of itemsets
-    :returns new_itemsets: list of itemsets containing l+1 members
-    '''
-    itemsets = itemsets.keys()  # we are only interested on the itemsets
-                                # themselves, not the frequencies
-    k = len(itemsets[0])  # length of the itemsets
-    # making sure all the itemsets have the same length
-    assert(all(len(itemset) == k for itemset in itemsets))
-    kmomo = build_k_minus_one_members_and_their_occurrences(itemsets, k)
-    return generate_itemsets_from_kmomo(kmomo)
-
-
 def build_k_minus_one_members_and_their_occurrences(itemsets, k):
     '''in order to self join the itemsets, they must be sorted in lexical
     order. Then, all the unique sets of k-1 members must be idenfified and
@@ -161,6 +146,21 @@ def generate_itemsets_from_kmomo(kmomo):
                 union = combination[0].union(combination[1])
                 new_itemsets.append(union)
     return new_itemsets
+
+
+def self_join(itemsets):
+    '''generates itemsets efficiently by selfjoining the itemsets
+
+    :param itemsets: list of itemsets
+    :returns new_itemsets: list of itemsets containing l+1 members
+    '''
+    itemsets = itemsets.keys()  # we are only interested on the itemsets
+                                # themselves, not the frequencies
+    k = len(itemsets[0])  # length of the itemsets
+    # making sure all the itemsets have the same length
+    assert(all(len(itemset) == k for itemset in itemsets))
+    kmomo = build_k_minus_one_members_and_their_occurrences(itemsets, k)
+    return generate_itemsets_from_kmomo(kmomo)
 
 
 def build_one_consequent_rules(itemset, freq, itemsets_list):
