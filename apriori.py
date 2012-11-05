@@ -90,8 +90,8 @@ def generate_itemsets(itemsets_list):
     following itemsets using self joins, and then eliminating the itemsets
     without the minimum support
 
-    :param itemsets_list: a list containing only one element which is the
-        dictionary of itemsets of length 1
+    :param itemsets_list: a list containing only one element which, at this
+        stage, is the dictionary of itemsets of length 1
     '''
     next_candidate_item_sets = self_join(itemsets_list[0])
     while(len(next_candidate_item_sets) != 0):
@@ -163,7 +163,18 @@ def generate_itemsets_from_kmomo(kmomo):
     return new_itemsets
 
 
-def build_one_consequent_rules(itemset, freq):
+def build_one_consequent_rules(itemset, freq, itemsets_list):
+    '''builds one-consequent rules based on an itemset and its frequency, but
+    most importantly, it also generates the accurate consequents that will be
+    used to generate the two-consequent rules. In other words "if one or other
+    of the single-consequent rules does not hold, there is no point in
+    considering the double-consequent one" [Witten et. al., Data mining :
+    practical machine learning tools and techniques]
+
+    :param itemset: an itemset
+    :param freq: frequency of the above mentioned itemset
+    :param itemsets_list: dictionaries of itemsets of all lengths
+    '''
     accurate_consequents = []
     rules = []
     for combination in combinations(itemset, 1):
@@ -177,7 +188,17 @@ def build_one_consequent_rules(itemset, freq):
     return accurate_consequents, rules
 
 
-def build_n_plus_one_consequent_rules(itemset, freq, accurate_consequents):
+def build_n_plus_one_consequent_rules(itemset, freq, accurate_consequents,
+                                      itemsets_list):
+    '''similarly to the build_one_consequent_rules method, this one generates
+    the n plus one consequent rules, the same way the former method does
+
+    :param itemset: an itemset
+    :param freq: frequency of the above mentioned itemset
+    :param accurate_consequents: the accurate consequents generated in the
+        former method
+    :param itemsets_list: dictionaries of itemsets of all lengths
+    '''
     rules = []
     consequent_length = 2
     while(len(accurate_consequents) != 0 and
@@ -203,12 +224,14 @@ def generate_rules(itemsets, min_conf, itemsets_list):
     '''
     :param itemsets: itemsets of same lenght to be used for generating subsets
     :param min_conf: minimum confidence
-    :param itemsets_list: dictionaries of item_sets of all lengths
+    :param itemsets_list: dictionaries of itemsets of all lengths
+    :returns rules: list of rules in the form of
+        [((antecedent, consequent), confidence), ...]
     '''
     rules = []
     for itemset, freq in itemsets.iteritems():
-        accurate_consequents, new_rules = build_one_consequent_rules(itemset,
-                                                                     freq)
+        accurate_consequents, new_rules = \
+            build_one_consequent_rules(itemset, freq, itemsets_list)
         rules += new_rules
         # 2-item-itemsets only produce 1-consequent rules,
         # no need to go further with those
@@ -216,7 +239,8 @@ def generate_rules(itemsets, min_conf, itemsets_list):
             continue
 
         rules += build_n_plus_one_consequent_rules(itemset, freq,
-                                                   accurate_consequents)
+                                                   accurate_consequents,
+                                                   itemsets_list)
     return list(set(rules))
 
 
@@ -246,5 +270,5 @@ if __name__ == '__main__':
         rules += generate_rules(itemsets, min_conf, itemsets_list)
 
     t2 = clock()
-    # print 'Time spent: ', round(t2 - t1, 3)
+    print 'Time spent: ', round(t2 - t1, 3)
     print_results(itemsets_list, rules, transactions)
