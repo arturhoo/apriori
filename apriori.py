@@ -4,6 +4,7 @@ from itertools import combinations
 from collections import defaultdict
 from time import clock
 from optparse import OptionParser
+from pprint import pprint
 
 
 def parse_arguments(parser):
@@ -55,7 +56,7 @@ def print_results(itemsets_list, rules, transactions):
     for idx, itemsets in enumerate(itemsets_list):
         if len(itemsets) == 0:
             continue
-        print 'Itemsets of size', idx + 1
+        # print 'Itemsets of size', idx + 1
         formatted_itemsets = []
         for itemset, freq in itemsets.iteritems():
             support = float(freq) / len(transactions)
@@ -63,10 +64,10 @@ def print_results(itemsets_list, rules, transactions):
                                        round(support, 3)))
         sorted_itemsets = sorted(formatted_itemsets,
                                  key=lambda tup: (-tup[1], tup[0]))
-        for itemset, support in sorted_itemsets:
-            print itemset, '{0:.3f}'.format(support)
+        # for itemset, support in sorted_itemsets:
+            # print itemset, '{0:.3f}'.format(support)
 
-        print
+        # print
 
     print 'RULES'
     formatted_rules = [(','.join(sorted(map(str, rule[0]))) + ' -> ' +
@@ -82,7 +83,16 @@ def remove_itemsets_without_min_support(itemsets, min_sup, transactions):
     '''simply remove the itemsets that doesn't have the minimum support'''
     for itemset, freq in itemsets.items():
         if float(freq) / len(transactions) < min_sup:
-            del itemsets[itemset]
+            if len(itemset) >= 2:
+                mul = 1.0
+                for item in itemset:
+                    mul *= itemsets_list[0][frozenset([item])]
+                atm = pow(freq, len(itemset)) / mul
+                if atm < 0.25:
+                    del itemsets[itemset]
+            # else:
+            #     del itemsets[itemset]
+            # del itemsets[itemset]
 
 
 def generate_itemsets(itemsets_list):
@@ -270,5 +280,7 @@ if __name__ == '__main__':
         rules += generate_rules(itemsets, min_conf, itemsets_list)
 
     t2 = clock()
-    print 'Time spent: ', round(t2 - t1, 3)
+    # print 'Time spent: ', round(t2 - t1, 3)
+    print 'Rules: ', len(rules)
     print_results(itemsets_list, rules, transactions)
+    # pprint(itemsets_list[0])
