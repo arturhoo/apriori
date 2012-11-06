@@ -48,7 +48,27 @@ Técnicas de mineração de dados são amplamente utilizadas em diversos campos de a
 
 \section{APRIORI}
 
+Consideramos $I=\{i_1, i_2, ..., i_m\}$ como um conjunto de itens. Seja $T$ um conjunto de transações (possivelmente uma base de dados), onde cada transação $t$ é um conjunto de itens tal que $t\subseteq I$. Uma \textit{regra de associação} é uma implicação da forma $X \rightarrow Y$, onde $X \subset I$, $Y \subset I$ e $X \cap Y = \emptyset$. A transação $X \rightarrow Y$ se aplica ao conjunto de transações $T$ com \textit{confiança} $c$ se $c\%$ das transações em $T$ que ``suportam'' $X$ também ``suportam'' $Y$. A regra tem \textit{suporte} $s$ em $T$ se $s\%$ das transações em $T$ contêm $X \cup Y$ \cite{Liu:1999vk}.
+
+Dado um conjunto de transações $T$, o problema de minera regras de associações é o de descobrir todas as regras de associação que possuem suporte e confiança maior que um valor mínimo especificado para suporte (\textit{minsup}) e confiança (\textit{minconf}).
+
+Um algoritmo de mineração de associações trabalha, basicamente, em dois estágios:
+\begin{enumerate}
+    \item geração de todos os conjuntos de itens que satisfazem \textit{minsup}
+    \item geração de todas as regras de associação que satisfazem \textit{minconf} usando os conjuntos gerados no passo anterior
+\end{enumerate}
+
+O estágio 1 começa com a geração dos conjuntos de somente 1 item, procedimento que, na realidade, representa uma contagem do número de transações onde cada item $i$ aparece. Em seguida, são gerados os conjuntos de 2 itens tomando pares a partir dos conjuntos de 1 item. Através desse mesmo procedimento são gerados conjuntos de $k$ itens de maneira construtiva, até que seja atingido um limite para $k = \lvert I \rvert$.
+
+Assim que todos os conjuntos de itens com suporte mínimo foram gerados o segundo estágio simplesmente envolve transformar cada um desses conjuntos em uma regra ou um conjunto de regras, que respeitem a confiança mínima.
+
+
 \subsection{Geração de conjuntos de itens de maneira eficiente}
+
+É importante notar que a métrica de \textit{suporte} satisfaz a propriedade do fechamento. Se um conjunto de itens satisfaz um valor para \textit{minsup} então todos seus subconjuntos também o satisfazem. Essa propriedade permite que a geração de conjuntos de itens seja feita de maneira mais eficiente.
+
+No processo de geração de conjuntos de itens que satisfazem um valor de \textit{minsup} são baseados num procedimento conhecido como busca \textit{level-wise}. Consideremos $k$-itemset como um conjunto de itens com $k$ itens que é ``largo'' quando tem suporte superior a \textit{minsup}. Primeiramente são gerados todos os $1$-itemsets largos
+
 
 \subsection{Geração de regras de maneira eficiente}
 
