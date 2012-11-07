@@ -78,7 +78,7 @@ Como mencionado anteriormente, o segundo estágio toma cada conjunto de itens e g
 
 Todavia, existe uma maneira mais inteligente. Se a regra com consequente duplo $(A B) \rightarrow (C D)$ possui suporte e confiança superiores ao mínimo estabelecido, as duas regras com consequentes únicos formadas a partir do mesmo conjunto de itens também respeitam esse valores mínimos: $(A B D) \rightarrow (C)$ e $(A B C) \rightarrow (D)$.
 
-Reciprocamente, se uma das regras com consequentes únicos não possui os valores mínimos para confiança e suporte, não há razão para considerar a regra com consequente duplo. Através desse mecanismo é possível construir a partir de regras com consequentes únicos, novas com consequentes duplos, e a partir dessas, construir regras com consequentes triplos e assim em diante. Naturalmente, cada regra candidata deve ser testada para constatar se realmente possui a confiança mínima estabelecida.
+Reciprocamente, se uma das regras com consequentes únicos não possui os valores mínimos para confiança e suporte, não há razão para considerar a regra com consequente duplo. Através desse mecanismo é possível construir a partir de regras com consequentes únicos, novas com consequentes duplos, e a partir dessas, construir regras com consequentes triplos e assim em diante. Naturalmente, cada regra candidata deve ser testada para constatar se realmente possui a confiança mínima estabelecida \cite{Witten:2011}.
 
 
 \subsection{Complexidade}
@@ -86,6 +86,33 @@ Reciprocamente, se uma das regras com consequentes únicos não possui os valores 
 
 \section{PROBLEMA DO ITEM RARO}
 
+O elemento chave que torna a mineração de regras de associação uma atividade prática é o valor mínimo para o suporte. Ele é usado para podar o espaço de busca e limitar o número de regras geradas. Todavia, a utilização de um valor único para \textit{minsup} implicitamente assume que todos os itens nas transações têm a mesma natureza e/ou possuem frequências similares no banco de dados. Em aplicações da vida real, esse geralmente não é o caso, pois alguns itens aparecem raramente nas transações, enquanto outros aparecem muito frequentemente, ocasionando dois problemas:
+
+\begin{enumerate}
+    \item Se \textit{minsup} é definido muito alto, não serão encontradas regras que envolvem itens infrequentes ou raros nas transações;
+    \item Para que sejam geradas regras que envolvam tanto os itens frequentes quanto os raros, o valor de \textit{minsup} deve ser definido muito baixo. Todavia, isso pode levar a uma explosão combinatorial, produzindo muitas regras, uma vez que os itens frequentes serão associados entre si de todas as maneiras possíveis, sendo muitas delas irrelevantes ou sem significado.
+\end{enumerate}
+
+Esse dilema é conhecido como o \textit{problema do item raro} \cite{Liu:1999vk}. O trabalho em questão utiliza uma proposta desenvolvida pelos alunos Artur Oliveira Rodrigues e Thales Filizola Costa e foi batizada de \textit{Artur-Thales Metric} ou \textit{atm}. Ela é uma medida para o um conjunto de itens $I = \{i_1, i_2, ..., i_m\}$, sendo definida como:
+
+\begin{align*}
+    \Psi = \frac{freq(I)^m}{freq(i_1) freq(i_2) ...  freq(i_m)}
+\end{align*}
+
+É importante notar que o intervalo para \textit{atm} é $[0, 1]$, e que assim como a confiança e o suporte, ele admite um valor mínimo. Essa nova medida só é utilizada quando é identificado um conjunto de itens com suporte abaixo do mínimo estabelicido (um possível conjunto com itens raros), quando será calculado de \textit{atm} para esse conjunto. Somente caso o valor seja inferior ao mínimo estabelecido que o conjunto de itens será descartado. O pseudo-código abaixo ilustra essa abordagem:
+
+\begin{algorithm}[H]
+\begin{footnotesize}
+    \If{sup do itemset $<$ minsup}{
+        \If{atm do itemset $<$ minatm}{
+            remove itemset
+        }
+    }
+\caption{Remoção de conjunto de item}
+\end{footnotesize}
+\end{algorithm}
+
+Vale ressaltar que quando essa medida é utilizada, todos os $1$-itemsets são gerados, pois somente assim será possível calcular o denominador da métrica \textit{atm}.
 
 \section{BASE DE DADOS}
 
