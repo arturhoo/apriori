@@ -106,7 +106,10 @@ def generate_itemsets(itemsets_list, min_sup, min_atm):
     :param itemsets_list: a list containing only one element which, at this
         stage, is the dictionary of itemsets of length 1
     '''
-    next_candidate_item_sets = self_join(itemsets_list[0])
+    try:
+        next_candidate_item_sets = self_join(itemsets_list[0])
+    except IndexError:
+        return
     while(len(next_candidate_item_sets) != 0):
         itemsets_list.append(defaultdict(int))
         for idx, item_set in enumerate(next_candidate_item_sets):
@@ -116,7 +119,10 @@ def generate_itemsets(itemsets_list, min_sup, min_atm):
 
         remove_itemsets_without_min_support(itemsets_list[-1], min_sup,
                                             transactions, min_atm)
-        next_candidate_item_sets = self_join(itemsets_list[-1])
+        try:
+            next_candidate_item_sets = self_join(itemsets_list[-1])
+        except IndexError:
+            break
 
 
 def build_k_minus_one_members_and_their_occurrences(itemsets, k):
