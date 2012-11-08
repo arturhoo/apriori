@@ -69,7 +69,7 @@ Assim que todos os conjuntos de itens com suporte mínimo foram gerados o segundo
 
 No processo de geração de conjuntos de itens que satisfazem um valor de \textit{minsup} são baseados num procedimento conhecido como busca \textit{level-wise}. Consideremos $k$-itemset como um conjunto de itens com $k$ itens que é ``largo'' quando tem suporte superior a \textit{minsup}. Primeiramente são gerados todos os $1$-itemsets largos, seguidos por todos os $2$-itemsets e assim por diante. Mas é importante notar que se um itemset não é largo no nível $k-1$, ele é descartado já que qualquer adição de itens a esse conjunto não formará um conjunto largo (propriedade do fechamento). Assim, todos os potenciais itemsets largos no nível $k$ são gerados a partir de itemsets largos no nível $k-1$ \cite{Liu:1999vk}.
 
-Um exemplo explica melhor esse procedimento. Supondo cinco $3$-itemsets: $(A B C), (A B D), (A C D), (A C E),$ e $(B C D)$. A união dos dois primeiros, $(A B C D)$ é um $4$-itemset candidato porque os seus outros subconjuntos $3$-itemsets $(A C D)$ e $(B C D)$ possuem suporte acima do mínimo. Se os $3$-itemsets estão ordenados por ordem lexográfica, como estão nesse exemplo, então é necessário considerar apenas pares com os mesmos dois primeiros membros. Por exemplo, não consideramos $(A C D)$ e $(B C D)$ porque $(A B C D)$ também pode ser gerado a partir de $(A B C)$ e $(A B D)$, e se esses dois não são $3$-itemsets candidatos, então $(A B C D)$ não poderá ser um $4$-itemset candidato. Isso nos deixa com os pares $(A B C)$ e $(A B D)$, que já foram explicados, e $(A C D)$ e $(A C E)$. Esse segundo par leva ao conjunto $(A C D E)$, cujos subconjuntos $3$-itemsets não possuem todos o suporte mínimo, sendo assim descartado \cite{Witten:2011}.
+Um exemplo explica melhor esse procedimento. Supondo cinco $3$-itemsets: $(A B C), (A B D), (A C D), (A C E),$ e $(B C D)$. A união dos dois primeiros, $(A B C D)$ é um $4$-itemset candidato porque os seus outros subconjuntos $3$-itemsets $(A C D)$ e $(B C D)$ possuem suporte acima do mínimo. Se os $3$-itemsets estão ordenados por ordem lexicográfica, como estão nesse exemplo, então é necessário considerar apenas pares com os mesmos dois primeiros membros. Por exemplo, não consideramos $(A C D)$ e $(B C D)$ porque $(A B C D)$ também pode ser gerado a partir de $(A B C)$ e $(A B D)$, e se esses dois não são $3$-itemsets candidatos, então $(A B C D)$ não poderá ser um $4$-itemset candidato. Isso nos deixa com os pares $(A B C)$ e $(A B D)$, que já foram explicados, e $(A C D)$ e $(A C E)$. Esse segundo par leva ao conjunto $(A C D E)$, cujos subconjuntos $3$-itemsets não possuem todos o suporte mínimo, sendo assim descartado \cite{Witten:2011}.
 
 
 \subsection{Geração de regras de maneira eficiente}
@@ -82,6 +82,8 @@ Reciprocamente, se uma das regras com consequentes únicos não possui os valores 
 
 
 \subsection{Complexidade}
+
+A complexidade do algoritmo Apriori no pior caso é $(\lvert I \rvert \cdot \lvert D \rvert \cdot 2^{\lvert I \rvert})$, onde $I=\{i_1, i_2, ..., i_m\}$ é o conjunto de itens e $D$ é o dicionário que contêm a frequência de cada subconjunto de itens de $I$. Essa complexidade é equivalente ao do algoritmo força-bruta, já que todos os conjuntos de itens podem atender o mínimo estabelecido para a confiança. Na prática isso não ocorre, e o cálculo para essas situações foge do escopo desse trabalho. Mais detalhes podem ser encontrados em \cite{Zaki:2012}.
 
 
 \section{PROBLEMA DO ITEM RARO}
@@ -112,23 +114,124 @@ Esse dilema é conhecido como o \textit{problema do item raro} \cite{Liu:1999vk}.
 \end{footnotesize}
 \end{algorithm}
 
-Vale ressaltar que quando essa medida é utilizada, todos os $1$-itemsets são gerados, pois somente assim será possível calcular o denominador da métrica \textit{atm}.
+Vale ressaltar que quando essa medida é utilizada, todos os $1$-itemsets são gerados, pois somente assim será possível calcular o denominador da métrica \textit{atm}. Caso não seja fornecido um valor mínimo para \textit{atm} o algoritmo tradicional para o \textit{Apriori} é utilizado.
+
+\subsection{Implementação}
+
+O algoritmo foi implementado utilizando a linguagem \textit{Python}, pois essa provê algumas estruturas de dados como conjuntos que facilitam o desenvolvimento do algoritmo.
+
 
 \section{BASE DE DADOS}
+
+A base de dados utilizada foi disponibilizada pela comissão avaliadora da disciplina, apresentando dados de uma pesquisa semelhante a um censo populacional, possuindo 48842 transações do tipo atributo-valor, como por exemplo \textit{age=senior}. Conclui-se que em uma transação não existiram dois valores diferentes para um mesmo atributo, já que isso não deve ocorrer em nenhuma circunstância.
+
+É importante notar que a base disponibilizada foi modificada de uma maneira que a tornou inconsistente, pois as transações que possuem os atributos \textit{gain} e \textit{loss} deveriam ter sido eliminadas, o que não foi feito. Dada a ausência de significado para esses atributos, a existência deles na base pode levar a geração de regras desinteressantes. As quinze $1$-itemsets mais frequentes estão exibidos na figura \ref{top_15_1_itemsets}.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/top_15_1_itemsets.pdf}
+    \caption{Os 15 1-itemsets mais frequentes}
+    \label{top_15_1_itemsets}
+\end{figure}
 
 
 \section{AVALIAÇÃO EXPERIMENTAL}
 
 \subsection{Procedimentos}
 
-%Máquina onde foi testado
+Com o intuito de se obter testes mais consistentes, os experimentos foram executados em ambiente virtualizado, com capacidade de processamento e memória primária reduzidas, 50\% da capacidade da máquina hospedeira e 1024MiB, respectivamente. O sistema operacional do ambiente virtualizado era Ubuntu Server 12.04 64 bits e os softwares utilizados foram interpretador Python (2.7.2) PyPy versão 1.9.0, e GCC versão 4.2.1. A máquina hospedeira possuía sistema operacional Mac OS X 10.8.2, processador \textit{quad-core} de 2.3GHz e memória primária com capacidade de 16GiB.
+
+Todos os testes foram realizados 5 vezes e o resultado médio para o tempo de execução foi considerado. Finalmente, certificou-se que a solução desenvolvida execute perfeitamente na estação \verb+claro.grad.dcc.ufmg.br+.
+
 
 \subsection{Análise de Parâmetros}
 
+Os parâmetros \textit{minsup} e \textit{minconf} foram variados no intervalo $[0.3, 0.9]$ com saltos de $0.1$, os resultados podem ser vistos na figura \ref{fig_parametros}. Como é de se esperar, o número de regras é maior para valores menores dos dois parâmetros. Para \textit{minconf} e \textit{minsup} com valor 0.3 foram geradas 416 regras, sendo que muitas dessas regras são insignificantes como, por exemplo
+
+\begin{footnotesize}
+    \begin{verbatim}
+country=United-States,marital=Married-civ-spouse,race=White,
+    relationship=Husband -> sex=Male 1.000
+    \end{verbatim}
+\end{footnotesize}
+
+uma vez que se o indivíduo é ``husband'' (marido), obviamente ele é ``male'' (do sexo masculino), justificando o valor de confiança $1.000$. É importante observar entretanto que se esse itens, \textit{relationship=Husband} e \textit{sex=Male} fossem altamente frequentes, essa regra ainda seria encontrada para valores altos dos parâmetros. Outra regra pouco interessante é
+
+\begin{footnotesize}
+    \begin{verbatim}
+country=United-States -> age=middle-aged,sex=Male 0.338
+    \end{verbatim}
+\end{footnotesize}
+
+por se tratar de uma regra que reflete um viés desinteressante da base de dados. Um aumento dos valores desses parâmetros para $0.5$ implica na geração de regras mais relevantes, como
+
+\begin{footnotesize}
+    \begin{verbatim}
+salary<=50K -> workclass=Private 0.714
+    \end{verbatim}
+\end{footnotesize}
+
+que claramente traz uma informação interessante, a de que se o salário de um indivíduo é inferior a 50 mil, ele tem $71.4\%$ de chances de estar empregado no setor Privado.
+
+Finalmente, ainda pelo gráfico da figura \ref{fig_rules}, é possível notar que o aumento tanto no valor de \textit{minsup} quanto no de \textit{minconf} implica numa diminuição do número de regras geradas, com um declínio um pouco mais acentuado para o primeiro parâmetro. Valores superiores a $0.8$ para \textit{minsup} já implicam na nulidade de regras geradas.
+
+É interessante notar na figura \ref{fig_execution_time} que o tempo de execução do algoritmo diminui em ordem logarítmica com o aumento do valor de \textit{minsup}, enquanto um aumento no valor de \textit{minconf} não implica em alterações evidentes no tempo de execução.
+
+\begin{figure}[h!]
+    \centering
+    \subfloat[][Regras]{
+        \includegraphics[width=0.5\textwidth]{../plots/rules.pdf}
+        \label{fig_rules}
+    }
+    \subfloat[][Tempo de execução]{
+        \includegraphics[width=0.5\textwidth]{../plots/execution_time.pdf}
+        \label{fig_execution_time}
+    }
+    \caption{Impacto dos valores para \textit{minsup} e \textit{minconf}}
+    \label{fig_parametros}
+\end{figure}
+
+
 \subsection{Análise da Qualidade da Solução}
 
+\textit{Inicialmente, uma análise da solução com vistas somente no algoritmo Apriori não é relevante para essa documentação, uma vez que não foram disponibilizadas informações complementares da base de dados que permitissem um estudo comparativo e qualitativo das regras gerados. Assim, essa seção focará na análise das implicações da proposta de solução para o problema do item raro.}
+
+Da mesma maneira que para o suporte, quanto menor o valor do \textit{atm}, mais conjuntos de itens serão gerados, causando um aumento no custo computacional. Em específico, a solução proposta, $\Psi$, envolve a busca de $\lvert I \rvert + 1$ valores de frequências para cada conjunto de itens $I = \{i_1, i_2, ..., i_m\}$, enquanto o cálculo do suporte envolve a busca de somente um valor. Tendo sido estabelecidos os valores $minsup = 0.5$ e $minconf=0.7$, variou-se o valor de \textit{minatm} no intervalo $[0.2, 1.0]$, com saltos de $0.1$. A influência no tempo de execução e no número de regras geradas pode ser visto na figura \ref{fig_atm_impact}. Fica claro que com o aumento da restrição para \textit{atm} menos regras são produzidas. Por outro lado, o tempo de execução não sofre variação significante. Isso se deve ao fato de que a o impacto da inclusão de novos conjuntos de itens é insignificante perto do custo de se testar cada conjunto de itens para o valor de $\Psi$. Vale ainda ressaltar que o tempo de execução sem o \textit{atm}, para esses valores de suporte e confiança é de $1.019$ segundos.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{../plots/atm_impact.pdf}
+    \caption{Impacto de \textit{atm} no número de regras geradas e no tempo de execução}
+    \label{fig_atm_impact}
+\end{figure}
+
+Se observarmos as regras geradas quando o valor de $minatm = 1.0$, que significa incluir conjuntos de itens infrequentes mas cujos itens sempre co-ocorrem juntos, observamos que novas regras são identificadas (regras que não foram geradas com os mesmos valores de \textit{minsup} e \textit{minconf} no Apriori tradicional), como por exemplo
+
+\begin{footnotesize}
+    \begin{verbatim}
+edu_num=2 -> education=1st-4th 1.000
+edu_num=3 -> education=5th-6th 1.000
+edu_num=4 -> education=7th-8th 1.000
+    \end{verbatim}
+\end{footnotesize}
+
+que estão mostrando atributos redundantes na base de dados. Se a base fosse de cesto de compras, esse tipo de regra poderia evidenciar itens raros mas que sempre são comprados juntos, como por exemplo, esmalte e acetona. A geração dessas regras corrobora a alta qualidade da solução para o problema do item raro apresentada. Adicionalmente, o suporte para o item \verb+edu_num=3+, por exemplo, é $0.01$ o que faz dele um item raro.
+
+Se relaxarmos o valor de \textit{minatm} para $0.8$, novas regras são geradas, como por exemplo
+
+\begin{footnotesize}
+    \begin{verbatim}
+age=young -> marital=Never-married 0.744
+salary>50K -> relationship=Husband 0.757
+hours=full-time -> workclass=Private 0.722
+    \end{verbatim}
+\end{footnotesize}
+
+que novamente, são regras que possuem itens raros, mas que são extremamente interessantes, novamente corroborando a qualidade da solução desenvolvida nesse trabalho.
 
 \section{CONCLUSÃO}
+
+Nesse trabalho foi apresentado um estudo sobre a mineração de conjuntos de itens frequentes, em especial com vistas no algoritmo Apriori. O problema do item raro foi caracterizado e uma solução foi proposta para contornar esse problema. Essa solução se mostrou boa ao identificar regras que envolvem itens raros, mas que ainda sim são relevantes para o estudo proposto. Além disso, foi avaliado experimentalmente o impacto dos valores para confiança e suporte mínimo.
 
 
 \nocite{*}
