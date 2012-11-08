@@ -292,5 +292,3 @@ if __name__ == '__main__':
 
     t2 = clock()
     print_results(itemsets_list, rules, transactions)
-    print 'Time spent:', round(t2 - t1, 3)
-    print 'Rules:', len(rules)
